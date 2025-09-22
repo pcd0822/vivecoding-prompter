@@ -95,9 +95,14 @@
         <header class="text-center mb-10 relative">
             <h1 class="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-teal-400 pb-2">VibeCoding 프롬프트 생성기</h1>
             <p class="mt-4 text-lg text-gray-300">AI와 대화하며 당신의 아이디어를 완벽한 코딩 프롬프트로 다듬어보세요.</p>
-            <button id="reset-button" onclick="resetApp()" class="hidden absolute top-0 right-0 bg-gray-700 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                새로 만들기
-            </button>
+            <div class="absolute top-0 left-0 text-left">
+                <p class="text-sm text-gray-400">Designed by 들쌤</p>
+            </div>
+            <div class="absolute top-0 right-0 text-right">
+                <button id="reset-button" onclick="resetApp()" class="hidden bg-gray-700 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                    새로 만들기
+                </button>
+            </div>
         </header>
 
         <!-- Step 1: Configuration -->
@@ -208,6 +213,10 @@
              </div>
         </main>
     </div>
+
+    <footer class="text-center py-8">
+        <p class="text-xs text-gray-500">© 2024 VibeCoding. All Rights Reserved.</p>
+    </footer>
 
     <script>
         // --- STATE MANAGEMENT ---
@@ -648,4 +657,7 @@
     </script>
 </body>
 </html>
+
+
+
 
