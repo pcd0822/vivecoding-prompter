@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <title>VibeCoding 프롬프트 생성기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        /* 스크롤바 디자인 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a202c;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4a5568;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #718096;
+        }
+        .chat-bubble {
+            padding: 12px 16px;
+            border-radius: 20px;
+            word-wrap: break-word;
+            width: fit-content;
+        }
+        .user-bubble {
+            background-color: #4299e1;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .ai-bubble {
+            max-width: 75%;
+            background-color: #4a5568;
+            color: white;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .option-button {
+            transition: all 0.2s ease-in-out;
+        }
+        .option-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #FFF;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .edit-btn {
+            background: none; border: none; cursor: pointer; padding: 4px;
+            opacity: 0.5; transition: opacity 0.2s;
+        }
+        .edit-btn:hover { opacity: 1; }
+        .user-bubble-wrapper {
+            display: flex; align-items: center; gap: 8px;
+            align-self: flex-end; max-width: 75%;
+        }
+        .dashboard-card {
+            background-color: #2D3748; border-radius: 1rem; padding: 1.5rem;
+            height: 100%; display: flex; flex-direction: column;
+        }
+        .dashboard-card h3 {
+            font-size: 1.25rem; font-weight: bold; color: #90CDF4;
+            border-bottom: 2px solid #4A5568; padding-bottom: 0.5rem; margin-bottom: 1rem;
+        }
+        .dashboard-card ul {
+            list-style-position: inside; padding-left: 0.5rem;
+            flex-grow: 1;
+        }
+        .dashboard-card li { margin-bottom: 0.75rem; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white antialiased">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <header class="text-center mb-10 relative">
+            <h1 class="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-teal-400 pb-2">VibeCoding 프롬프트 생성기</h1>
+            <p class="mt-4 text-lg text-gray-300">AI와 대화하며 당신의 아이디어를 완벽한 코딩 프롬프트로 다듬어보세요.</p>
+            <button id="reset-button" onclick="resetApp()" class="hidden absolute top-0 right-0 bg-gray-700 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                새로 만들기
+            </button>
+        </header>
+
+        <!-- Step 1: Configuration -->
+        <section id="config-section" class="bg-gray-800 p-8 rounded-2xl shadow-2xl space-y-6 max-w-5xl mx-auto">
+            <h2 class="text-2xl font-bold border-b-2 border-blue-400 pb-2">1. 개발 환경 설정</h2>
+            
+            <div>
+                <label for="coding-env" class="block mb-2 text-md font-medium text-gray-300">코딩 AI 환경을 선택하세요:</label>
+                <select id="coding-env" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="Canvas AI">캔버스 AI (Canvas AI)</option>
+                    <option value="Gemini">구글 제미나이 (Google Gemini)</option>
+                    <option value="Claude">앤트로픽 클로드 (Anthropic Claude)</option>
+                    <option value="ChatGPT">OpenAI ChatGPT</option>
+                </select>
+            </div>
+
+            <div>
+                 <label for="openai-api-key" class="block mb-2 text-md font-medium text-gray-300">OpenAI API 키를 입력하세요 (질문 생성용):</label>
+                 <input type="password" id="openai-api-key" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3" placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+                 <p class="text-sm text-gray-400 mt-1">입력된 키는 브라우저 내에서만 사용되며, 동적 질문 생성에 필요합니다.</p>
+            </div>
+            
+            <div>
+                <span class="block mb-2 text-md font-medium text-gray-300">프로젝트에서 API를 사용하나요?</span>
+                <div class="flex gap-4">
+                    <button onclick="toggleApiDetails(true)" id="api-yes-btn" class="flex-1 bg-gray-600 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-colors">예</button>
+                    <button onclick="toggleApiDetails(false)" id="api-no-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">아니요</button>
+                </div>
+            </div>
+
+            <div id="api-details" class="hidden space-y-4 pt-4 border-t border-gray-700">
+                <div>
+                    <label for="api-provider" class="block mb-2 text-md font-medium text-gray-300">API 제공자를 선택하세요 (프로젝트용):</label>
+                    <select id="api-provider" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="OpenAI">OpenAI</option>
+                        <option value="Google Gemini">Google Gemini</option>
+                        <option value="Anthropic Claude">Anthropic Claude</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="api-key" class="block mb-2 text-md font-medium text-gray-300">API 키를 입력하세요 (프로젝트용):</label>
+                    <input type="password" id="api-key" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3" placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+                    <p class="text-sm text-gray-400 mt-1">입력된 키는 생성될 스크립트에 직접 포함됩니다.</p>
+                </div>
+            </div>
+
+            <button onclick="startPromptCreation()" class="w-full bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600 text-white font-bold py-4 px-4 rounded-lg text-lg shadow-lg transition-transform transform hover:scale-105">
+                프롬프트 생성 시작
+            </button>
+        </section>
+
+        <!-- Main App Area (Chat, Workflow, Result) -->
+        <main id="main-app" class="hidden mt-10">
+             <div id="app-layout-grid" class="grid grid-cols-1 gap-8">
+                <!-- Left Column: Chat & Prompt -->
+                <div class="space-y-8">
+                     <section id="chat-section" class="bg-gray-800 p-6 rounded-2xl shadow-2xl h-[700px] flex flex-col">
+                        <h2 class="text-2xl font-bold border-b-2 border-blue-400 pb-2 mb-4 flex-shrink-0">2. 아이디어 구체화</h2>
+                        <div id="stage-indicator" class="text-center text-blue-300 font-bold mb-2"></div>
+                        <div id="progress-container" class="w-full flex-shrink-0 mb-4">
+                            <div class="flex justify-between mb-1">
+                                <span class="text-base font-medium text-blue-300">진행도</span>
+                                <span id="progress-text" class="text-sm font-medium text-blue-300">0 / 10</span>
+                            </div>
+                            <div class="w-full bg-gray-700 rounded-full h-2.5">
+                                <div id="progress-bar" class="bg-blue-500 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div id="chat-window" class="flex-grow overflow-y-auto space-y-4 pr-2 flex flex-col"></div>
+                        <div id="input-area" class="mt-4 flex-shrink-0"></div>
+                    </section>
+
+                    <section id="result-section" class="hidden bg-gray-800 p-6 rounded-2xl shadow-2xl">
+                        <h2 class="text-2xl font-bold border-b-2 border-blue-400 pb-2 mb-4">최종 프롬프트</h2>
+                        <div class="bg-gray-900 rounded-lg p-4 relative">
+                            <pre><code id="final-prompt" class="text-sm whitespace-pre-wrap break-words"></code></pre>
+                            <button onclick="copyToClipboard()" class="absolute top-2 right-2 bg-gray-700 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-md text-sm">복사</button>
+                        </div>
+                        <div id="copy-feedback" class="text-green-400 mt-2 text-sm hidden">클립보드에 복사되었습니다!</div>
+                    </section>
+                </div>
+                
+                <!-- Right Column: Dashboard -->
+                <section id="dashboard-section" class="hidden bg-gray-800 p-6 rounded-2xl shadow-2xl">
+                    <h2 class="text-2xl font-bold border-b-2 border-blue-400 pb-2 mb-4">3. 아이디어 분석 대시보드</h2>
+                    <div class="grid grid-cols-1 gap-6">
+                        <div id="workflow-card" class="dashboard-card">
+                            <h3>개발 워크플로우</h3>
+                            <ul id="workflow-list" class="space-y-3"></ul>
+                        </div>
+                        <div id="principles-card" class="dashboard-card">
+                            <h3>프롬프트 설계 원리</h3>
+                            <ul id="principles-list" class="space-y-3">
+                                <li><strong>Role & Persona:</strong> AI에게 '30년차 웹 전문가'라는 명확한 역할과 페르소나를 부여하여 응답의 전문성을 높입니다.</li>
+                                <li><strong>Goal:</strong> '단일 HTML 파일 생성'이라는 구체적인 목표를 제시하여 결과물의 형식을 명확히 합니다.</li>
+                                <li><strong>Context & Constraints:</strong> 사용자와의 대화 내용(요구사항)과 기술적 제약(Tailwind CSS, Vanilla JS 등)을 명시하여 AI가 컨텍스트에 맞는 코드를 생성하도록 유도합니다.</li>
+                                <li><strong>Target Environment:</strong> 결과물이 사용될 '캔버스 AI', 'Gemini' 등 특정 AI 환경을 지정하여 환경에 최적화된 코드를 생성하도록 합니다.</li>
+                            </ul>
+                        </div>
+                        <div id="edtech-card" class="dashboard-card">
+                            <h3>에듀테크 서비스 제언</h3>
+                            <ul id="edtech-list" class="space-y-3">
+                                <div class="loader-container flex justify-center items-center h-full"><div class="loader"></div></div>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+             </div>
+        </main>
+    </div>
+
+    <script>
+        // --- STATE MANAGEMENT ---
+        let currentStep = 0;
+        const AI_QUESTION_COUNT = 10;
+        let conversationHistory = [];
+        let userConfig = {};
+        let isLoading = false;
+        let currentQuestion = {};
+        let editingIndex = null;
+
+        // --- DOM ELEMENTS ---
+        const configSection = document.getElementById('config-section');
+        const mainApp = document.getElementById('main-app');
+        const chatWindow = document.getElementById('chat-window');
+        const inputArea = document.getElementById('input-area');
+        const resultSection = document.getElementById('result-section');
+        const finalPrompt = document.getElementById('final-prompt');
+        const dashboardSection = document.getElementById('dashboard-section');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const resetButton = document.getElementById('reset-button');
+        const appLayoutGrid = document.getElementById('app-layout-grid');
+        const stageIndicator = document.getElementById('stage-indicator');
+
+        // --- UI LOGIC ---
+
+        function toggleApiDetails(show) {
+            document.getElementById('api-details').classList.toggle('hidden', !show);
+            document.getElementById('api-yes-btn').classList.toggle('bg-blue-600', show);
+            document.getElementById('api-yes-btn').classList.toggle('bg-gray-600', !show);
+            document.getElementById('api-no-btn').classList.toggle('bg-blue-600', !show);
+            document.getElementById('api-no-btn').classList.toggle('bg-gray-600', show);
+        }
+
+        function startPromptCreation() {
+            userConfig.environment = document.getElementById('coding-env').value;
+            userConfig.openaiApiKey = document.getElementById('openai-api-key').value;
+            userConfig.useApi = !document.getElementById('api-details').classList.contains('hidden');
+
+            if (!userConfig.openaiApiKey) {
+                alert('질문 생성을 위한 OpenAI API 키를 입력해주세요.');
+                return;
+            }
+
+            if (userConfig.useApi) {
+                userConfig.apiProvider = document.getElementById('api-provider').value;
+                userConfig.apiKey = document.getElementById('api-key').value;
+                if (!userConfig.apiKey) {
+                    alert('프로젝트용 API 키를 입력해주세요.');
+                    return;
+                }
+            }
+
+            configSection.classList.add('hidden');
+            mainApp.classList.remove('hidden');
+            resetButton.classList.remove('hidden');
+
+            startConversation();
+        }
+        
+        function resetApp() {
+            if (confirm('정말로 모든 과정을 초기화하고 처음부터 다시 시작하시겠습니까?')) {
+                localStorage.removeItem('vibeCodingPromptResult');
+                currentStep = 0;
+                conversationHistory = [];
+                userConfig = {};
+                editingIndex = null;
+
+                chatWindow.innerHTML = '';
+                inputArea.innerHTML = '';
+
+                resultSection.classList.add('hidden');
+                dashboardSection.classList.add('hidden');
+                appLayoutGrid.classList.remove('lg:grid-cols-2');
+
+                mainApp.classList.add('hidden');
+                resetButton.classList.add('hidden');
+                configSection.classList.remove('hidden');
+                
+                document.getElementById('openai-api-key').value = '';
+                document.getElementById('api-key').value = '';
+                toggleApiDetails(false);
+            }
+        }
+
+        function startConversation() {
+            currentStep = 0;
+            updateProgress();
+            conversationHistory = [];
+            const firstQuestion = {
+                question: "만들고자 하는 웹 앱 프로젝트에 대해 간단히 설명해주세요.",
+                type: 'text'
+            };
+            displayQuestion(firstQuestion);
+        }
+
+        function getSystemPromptForCurrentStage() {
+            let stagePrompt = '';
+            let responseFormatRule = `**응답 형식:** 반드시 질문('question'), 질문 유형('type': 'choice'), 5개의 선택지 배열('options')을 포함하는 JSON 형식으로만 응답해야 합니다.`;
+
+            // Note: currentStep is 0-indexed. So step 1 is currentStep 0.
+            if (currentStep < 4) { // Steps 1-4
+                stagePrompt = `**1단계: 교육 철학의 뼈대 세우기**\n당신은 교육 컨설턴트입니다. 사용자가 만들려는 교육 프로그램의 핵심 '교육 철학'을 명확히 하도록 도와주세요. 전체 프로젝트의 흔들리지 않는 기준점을 만드는 단계입니다. 프로그램의 근본적인 목표, 핵심 학습 대상, 그리고 주요 교수 전략에 대해 깊이 있는 질문을 해주세요. 아직 구체적인 수업 활동이나 기능 구현에 대한 질문은 피해주세요.`;
+            } else if (currentStep < 8) { // Steps 5-8
+                stagePrompt = `**2단계: 수업 활동에 살 붙이기 (상세 모듈 설계)**\n이제 철학이라는 뼈대에 구체적인 '수업 활동'이라는 살을 붙일 차례입니다. 사용자가 개발자처럼 구조적으로 생각하도록 유도해주세요. 정보를 어떻게 정리하고 연결할지, 구체적인 학습 모듈을 어떻게 설계할지에 대해 질문해야 합니다. 아래 예시처럼 상세한 답변을 이끌어내는 질문을 해주세요.\n\n# 좋은 질문의 예시:\n- **주제:** 실용적인 영어 시제 학습\n- **상황:** 어제 잃어버린 열쇠를 찾고 있는 친구에게\n- **활동:** 두 가지 문장 카드(A: Did you find your key?, B: Have you found your key?) 중 더 자연스러운 것을 고르게 합니다.\n- **피드백 로직:** B를 고르면 "정답! 지금 열쇠를 찾았는지가 중요하니까요!"라고 피드백. A를 고르면 "과거에 찾았는지보다 '그래서 지금 열쇠가 있는지'가 더 중요하지 않을까요?"라고 힌트를 줍니다.\n- **데이터 구조:** 이 활동을 JSON으로 표현한다면 어떻게 구성할 수 있을까요?`;
+            } else { // Steps 9-10
+                stagePrompt = `**3단계: 완성된 설계도 정교화하기**\n이제 교육 철학과 핵심 수업 활동이 어느정도 정의되었습니다. 마지막으로 전체 설계도를 정교화할 차례입니다. 사용자의 학습 경험을 어떻게 향상시킬 수 있을지, 데이터는 어떻게 관리할 것인지, 또는 학습 효과를 어떻게 측정할 것인지에 대한 마무리 질문을 해주세요.`;
+            }
+
+            const previousQuestions = conversationHistory.map(turn => `- ${turn.questionObject.question}`).join('\n');
+            
+            return `${stagePrompt}\n\n**공통 규칙:**\n1. **중복 금지:** 아래 목록에 있는 질문은 절대로 다시 하지 마세요.\n${previousQuestions}\n2. ${responseFormatRule}`;
+        }
+        
+        async function getNextQuestionFromAI() {
+            if (isLoading) return;
+            isLoading = true;
+            setLoadingState(true);
+
+            const AI_SYSTEM_PROMPT = getSystemPromptForCurrentStage();
+            
+            const messages = [
+                { role: "system", content: AI_SYSTEM_PROMPT },
+                ...conversationHistory.map(turn => ({
+                    role: "user",
+                    content: `(질문: "${turn.questionObject.question}"에 대한 나의 답변: "${turn.answer}")`
+                })),
+                { role: "user", content: "이제 다음 질문을 해주세요."}
+            ];
+            
+            try {
+                const response = await fetch("https://api.openai.com/v1/chat/completions", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userConfig.openaiApiKey}` },
+                    body: JSON.stringify({
+                        model: "gpt-4-turbo",
+                        messages: messages,
+                        response_format: { "type": "json_object" }
+                    })
+                });
+
+                if (!response.ok) throw new Error(`API 요청 실패: ${response.statusText}`);
+                const data = await response.json();
+                const aiResponse = JSON.parse(data.choices[0].message.content);
+                displayQuestion(aiResponse);
+
+            } catch (error) {
+                console.error("AI 질문 생성 오류:", error);
+                displayAiMessage(`오류: ${error.message}`);
+                inputArea.innerHTML = `<p class="text-center text-red-400 p-4">질문 생성에 실패했습니다.</p>`;
+            } finally {
+                isLoading = false;
+            }
+        }
+        
+        function displayQuestion(q) {
+            currentQuestion = q;
+            displayAiMessage(q.question);
+            renderInputArea(q);
+        }
+
+        function askSecondSubjectiveQuestion() {
+            const secondQuestion = {
+                question: "이 교육 프로그램의 가장 중요한 학습 목표는 무엇인가요? (예: 특정 기술 습득, 개념 이해, 문제 해결 능력 향상 등)",
+                type: 'text'
+            };
+            displayQuestion(secondQuestion);
+        }
+        
+        function askFinalSubjectiveQuestion() {
+            const finalQuestion = {
+                question: "마지막으로, 개발하려는 에듀테크 서비스에 꼭 반영되었으면 하는 핵심 기능이 있다면 자유롭게 서술해주세요.",
+                type: 'text'
+            };
+            displayQuestion(finalQuestion);
+        }
+
+        function renderInputArea(q, defaultValue = '', isEditing = false) {
+            inputArea.innerHTML = '';
+            
+            const submitFn = isEditing ? 'submitEdit' : 'submitAnswer';
+            const btnTxt = isEditing ? '수정' : '입력';
+            const btnTxtSend = isEditing ? '수정' : '전송';
+            const isChoice = q.type === 'choice' && q.options && q.options.length > 0;
+            let otherDefaultValue = defaultValue;
+
+            if (isChoice) {
+                const optionsHtml = q.options.map(opt => {
+                     if (opt === defaultValue) otherDefaultValue = '';
+                    return `<button class="w-full text-left bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 px-4 rounded-lg option-button" onclick="${submitFn}('${opt.replace(/'/g, "\\'")}')">${opt}</button>`
+                }).join('');
+                inputArea.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 gap-3">${optionsHtml}<div class="md:col-span-2 flex gap-2 mt-2 border-t border-gray-700 pt-3"><input type="text" id="other-input" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3" placeholder="기타 (직접 입력)" value="${otherDefaultValue.replace(/"/g, "&quot;")}"><button onclick="${submitFn}(document.getElementById('other-input').value)" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-lg">${btnTxt}</button></div></div>`;
+                document.getElementById('other-input').addEventListener('keypress', e => e.key === 'Enter' && window[submitFn](e.target.value));
+            } else {
+                inputArea.innerHTML = `<div class="flex gap-2"><input type="text" id="user-text-input" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3" placeholder="답변을 입력하세요..." value="${defaultValue.replace(/"/g, "&quot;")}"><button onclick="${submitFn}()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-lg">${btnTxtSend}</button></div>`;
+                const textInput = document.getElementById('user-text-input');
+                textInput.focus();
+                textInput.addEventListener('keypress', e => e.key === 'Enter' && window[submitFn]());
+            }
+        }
+        
+        function setLoadingState(loading) {
+            if (loading) {
+                inputArea.innerHTML = `<div class="flex flex-col items-center justify-center p-4"><div class="loader"></div><p class="mt-4 text-gray-400">AI가 다음 질문을 생각 중입니다...</p></div>`;
+            }
+        }
+
+        function submitAnswer(answer) {
+            let userAnswer = answer;
+            if (answer === undefined) { 
+                 const textInput = document.getElementById('user-text-input');
+                 if (textInput) userAnswer = textInput.value;
+            }
+            if (userAnswer === null || userAnswer.trim() === '') return;
+
+            displayUserMessage(userAnswer, conversationHistory.length);
+            conversationHistory.push({ questionObject: currentQuestion, answer: userAnswer });
+            currentStep = conversationHistory.length;
+            updateProgress();
+
+            if (currentStep === 1) {
+                askSecondSubjectiveQuestion();
+            } else if (currentStep < AI_QUESTION_COUNT) {
+                getNextQuestionFromAI();
+            } else if (currentStep === AI_QUESTION_COUNT) {
+                askFinalSubjectiveQuestion();
+            } else {
+                generateFinalPromptAndDashboard();
+            }
+        }
+        
+        function submitEdit(answer) {
+            let newAnswer = answer;
+            if (answer === undefined) {
+                 const textInput = document.getElementById('user-text-input') || document.getElementById('other-input');
+                 if (textInput) newAnswer = textInput.value;
+            }
+            if (newAnswer === null || newAnswer.trim() === '' || editingIndex === null) return;
+            
+            conversationHistory[editingIndex].answer = newAnswer;
+
+            const wrapperToUpdate = document.getElementById(`user-bubble-wrapper-${editingIndex}`);
+            if (wrapperToUpdate) {
+                const bubble = wrapperToUpdate.querySelector('.user-bubble');
+                if (bubble) {
+                    bubble.textContent = newAnswer.length < 60 ? newAnswer.replace(/\r?\n/g, ' ') : newAnswer;
+                    bubble.classList.toggle('whitespace-nowrap', newAnswer.length < 60);
+                }
+            }
+            
+            const indexToScroll = editingIndex;
+            editingIndex = null;
+            
+            // Check if final prompt needs to be regenerated
+            if (resultSection.classList.contains('hidden') === false) {
+                 generateFinalPromptAndDashboard();
+            } else {
+                 renderInputArea(currentQuestion, '');
+            }
+            
+            setTimeout(() => {
+                const editedElement = document.getElementById(`user-bubble-wrapper-${indexToScroll}`);
+                if (editedElement) editedElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+
+        function displayAiMessage(message) {
+            const msgElement = document.createElement('div');
+            msgElement.className = 'chat-bubble ai-bubble';
+            msgElement.textContent = message;
+            chatWindow.appendChild(msgElement);
+            setTimeout(() => chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: 'smooth' }), 10);
+        }
+
+        function displayUserMessage(message, index) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'user-bubble-wrapper';
+            wrapper.id = `user-bubble-wrapper-${index}`;
+            
+            const editButton = document.createElement('button');
+            editButton.className = 'edit-btn';
+            editButton.title = '답변 수정';
+            editButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square text-gray-400" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/></svg>`;
+            editButton.onclick = () => editAnswer(index);
+
+            const msgElement = document.createElement('div');
+            msgElement.className = 'chat-bubble user-bubble';
+            msgElement.textContent = message.length < 60 ? message.replace(/\r?\n/g, ' ') : message;
+            msgElement.classList.toggle('whitespace-nowrap', message.length < 60);
+            
+            wrapper.appendChild(editButton);
+            wrapper.appendChild(msgElement);
+            chatWindow.appendChild(wrapper);
+            
+            setTimeout(() => chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: 'smooth' }), 10);
+        }
+
+        function editAnswer(index) {
+            if (isLoading || editingIndex !== null) return;
+            editingIndex = index;
+            const itemToEdit = conversationHistory[index];
+            renderInputArea(itemToEdit.questionObject, itemToEdit.answer, true);
+            inputArea.scrollIntoView({behavior: 'smooth'});
+        }
+
+        function updateProgress() {
+            const percentage = (currentStep / AI_QUESTION_COUNT) * 100;
+            progressBar.style.width = `${percentage > 100 ? 100 : percentage}%`;
+            progressText.textContent = `${Math.min(currentStep, AI_QUESTION_COUNT)} / ${AI_QUESTION_COUNT}`;
+            updateStageIndicator();
+        }
+
+        function updateStageIndicator() {
+            if (currentStep < 2) {
+                stageIndicator.textContent = '1단계: 교육 철학의 뼈대 세우기';
+            } else if (currentStep < 4) {
+                 stageIndicator.textContent = '1단계: 교육 철학의 뼈대 세우기';
+            } else if (currentStep < 8) {
+                stageIndicator.textContent = '2단계: 수업 활동에 살 붙이기';
+            } else if (currentStep < AI_QUESTION_COUNT) {
+                stageIndicator.textContent = '3단계: 설계도 정교화하기';
+            } else {
+                stageIndicator.textContent = '마무리 단계';
+            }
+        }
+
+        // --- PROMPT & DASHBOARD GENERATION ---
+        
+        function generateFinalPromptAndDashboard() {
+            inputArea.innerHTML = `<p class="text-center text-green-400 p-4">프롬프트와 분석 대시보드를 생성 중입니다...</p>`;
+            generateFinalPrompt();
+            populateDashboard();
+        }
+
+        function generateFinalPrompt() {
+            resultSection.classList.remove('hidden');
+            let prompt = `# Role: 30년차 웹 개발 전문가\n\n# Persona:\n너는 사용자의 요구사항을 정확히 파악하여 완벽한 웹 앱 코드를 작성하는 30년차 시니어 개발자야. 항상 최신 기술 트렌드를 따르며, 코드의 가독성, 확장성, 유지보수성을 최우선으로 고려해. Tailwind CSS를 활용한 반응형 디자인에 매우 능숙해.\n\n# Goal:\n아래 사용자의 요구사항을 기반으로, 단일 HTML 파일 내에 모든 HTML, CSS(Tailwind 사용), JavaScript 코드를 포함하는 완전한 웹 애플리케이션을 생성한다.\n\n# User Requirements:\n`;
+            conversationHistory.forEach(item => {
+                prompt += `- ${item.questionObject.question}: ${item.answer}\n`;
+            });
+            prompt += `\n# Instructions:\n1. **Single File Mandate**: 모든 코드는 하나의 \`index.html\` 파일 안에 있어야 한다. 별도의 .css나 .js 파일을 만들지 않는다.\n2. **Styling**: 반드시 Tailwind CSS를 사용하여 스타일을 적용한다. CDN을 통해 Tailwind를 로드한다.\n3. **Responsiveness**: 모든 기기(모바일, 태블릿, 데스크탑)에서 완벽하게 보이는 반응형 디자인을 구현한다.\n4. **JavaScript**: 바닐라 JavaScript를 사용하며, 코드는 \`<script>\` 태그 안에 작성한다. 코드는 명확하고 이해하기 쉽게 주석을 포함한다.\n5. **API Integration**: ${userConfig.useApi ? '아래 명시된 API를 사용한다.' : 'API 사용은 고려하지 않는다.'}\n`;
+            if (userConfig.useApi) {
+                prompt += `   - API Provider: ${userConfig.apiProvider}\n`;
+                prompt += `   - API Key: \`${userConfig.apiKey}\`. 이 키를 스크립트 내에 직접 포함하여 API 호출이 즉시 동작하도록 하라.\n`;
+            }
+            prompt += `\n# Target AI Environment Context:\n- 이 프롬프트는 **${userConfig.environment}** 환경에서 사용될 것이므로, 해당 환경의 특성에 맞는 가장 효율적이고 완성도 높은 코드를 생성해줘.\n\n이제 위의 모든 요구사항을 종합하여 최종 웹 애플리케이션 코드를 작성해줘.`;
+            finalPrompt.textContent = prompt.trim();
+        }
+
+        async function populateDashboard() {
+            dashboardSection.classList.remove('hidden');
+            appLayoutGrid.classList.add('lg:grid-cols-2');
+            
+            const workflowList = document.getElementById('workflow-list');
+            let workflowHTML = `<li><strong>아이디어 구체화:</strong> AI와의 대화를 통해 프로젝트의 요구사항을 정의합니다.</li><li><strong>프롬프트 생성:</strong> 대화 내용을 바탕으로 개발 AI를 위한 체계적인 프롬프트를 생성합니다.</li><li><strong>AI 코딩 (${userConfig.environment}):</strong> 생성된 프롬프트를 사용하여 선택한 AI 환경에서 코드를 생성합니다.</li>`;
+            if (userConfig.useApi) {
+                workflowHTML += `<li><strong>API 연동:</strong> 코드 내에 제공된 ${userConfig.apiProvider} API 키를 포함하여 즉시 테스트 가능한 상태로 만듭니다.</li>`;
+            }
+            workflowHTML += `<li><strong>테스트 및 배포:</strong> 생성된 코드를 테스트하고 웹에 배포하여 서비스를 완성합니다.</li>`;
+            workflowList.innerHTML = workflowHTML;
+
+            const edtechList = document.getElementById('edtech-list');
+            try {
+                const suggestions = await getEdtechSuggestionsFromAI();
+                if (Array.isArray(suggestions)) {
+                    edtechList.innerHTML = suggestions.map(s => `<li>${s}</li>`).join('');
+                    saveResultsToLocal({ conversationHistory, userConfig, suggestions });
+                } else {
+                    throw new Error("AI 응답이 예상된 배열 형식이 아닙니다.");
+                }
+            } catch (error) {
+                console.error('에듀테크 제언 생성 실패:', error);
+                edtechList.innerHTML = `<li>제언 생성 중 오류가 발생했습니다.</li>`;
+            }
+        }
+        
+        async function getEdtechSuggestionsFromAI() {
+            const conversationSummary = conversationHistory.map(turn => `Q: ${turn.questionObject.question}\nA: ${turn.answer}`).join('\n\n');
+            const SUGGESTION_PROMPT = `다음은 에듀테크 웹 앱 개발을 위한 아이디어 회의록입니다. 이 내용을 바탕으로, 해당 서비스가 시장에서 성공하기 위해 보완하거나 고려해야 할 점 3가지를 전문가 입장에서 제안해주세요. 각 제안은 한 문장으로 명료하게 표현해야 합니다. 응답은 {"suggestions": ["제안1", "제안2", "제안3"]} 형태의 JSON 객체로만 제공해주세요.\n\n[회의록]\n${conversationSummary}`;
+            const response = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userConfig.openaiApiKey}` },
+                body: JSON.stringify({
+                    model: "gpt-4-turbo",
+                    messages: [{ role: "user", content: SUGGESTION_PROMPT }],
+                    response_format: { "type": "json_object" }
+                })
+            });
+            if (!response.ok) throw new Error('API request failed');
+            const data = await response.json();
+            const responseObject = JSON.parse(data.choices[0].message.content);
+            return responseObject.suggestions;
+        }
+
+        // --- UTILITY ---
+        function saveResultsToLocal(data) {
+            try {
+                localStorage.setItem('vibeCodingPromptResult', JSON.stringify(data));
+            } catch (e) {
+                console.error("로컬 저장소에 저장 실패:", e);
+            }
+        }
+
+        function copyToClipboard() {
+            const textToCopy = finalPrompt.textContent;
+            const textArea = document.createElement('textarea');
+            textArea.value = textToCopy;
+            textArea.style.position = 'fixed';
+            textArea.style.top = '0';
+            textArea.style.left = '0';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                const successful = document.execCommand('copy');
+                const feedback = document.getElementById('copy-feedback');
+                if(successful) {
+                    feedback.classList.remove('hidden');
+                    setTimeout(() => feedback.classList.add('hidden'), 2000);
+                }
+            } catch (err) {
+                console.error('클립보드 복사 실패:', err);
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // --- INITIALIZATION ---
+        window.onload = () => {
+             toggleApiDetails(false);
+             const savedData = localStorage.getItem('vibeCodingPromptResult');
+             if (savedData) {
+                // Future implementation: Offer to load saved session.
+                // For now, we just clear it on reset.
+             }
+        };
+
+    </script>
+</body>
+</html>
+
