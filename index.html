@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VibeCoding 프롬프트 생성기</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -112,7 +112,7 @@
             <div>
                 <label for="coding-env" class="block mb-2 text-md font-medium text-gray-300">코딩 AI 환경을 선택하세요:</label>
                 <select id="coding-env" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="Canvas AI">캔버스 AI (Canvas AI)</option>
+                    <option value="Canvas AI">캔바AI (Canva AI)</option>
                     <option value="Gemini">구글 제미나이 (Google Gemini)</option>
                     <option value="Claude">앤트로픽 클로드 (Anthropic Claude)</option>
                     <option value="ChatGPT">OpenAI ChatGPT</option>
@@ -196,10 +196,17 @@
                         <div id="principles-card" class="dashboard-card">
                             <h3>프롬프트 설계 원리</h3>
                             <ul id="principles-list" class="space-y-3">
-                                <li><strong>Role & Persona:</strong> AI에게 '30년차 웹 전문가'라는 명확한 역할과 페르소나를 부여하여 응답의 전문성을 높입니다.</li>
-                                <li><strong>Goal:</strong> '단일 HTML 파일 생성'이라는 구체적인 목표를 제시하여 결과물의 형식을 명확히 합니다.</li>
-                                <li><strong>Context & Constraints:</strong> 사용자와의 대화 내용(요구사항)과 기술적 제약(Tailwind CSS, Vanilla JS 등)을 명시하여 AI가 컨텍스트에 맞는 코드를 생성하도록 유도합니다.</li>
-                                <li><strong>Target Environment:</strong> 결과물이 사용될 '캔버스 AI', 'Gemini' 등 특정 AI 환경을 지정하여 환경에 최적화된 코드를 생성하도록 합니다.</li>
+                                <li><strong>1. 역할 부여 (Role & Persona):</strong> AI에게 '30년차 웹 전문가' 같은 명확한 역할을 부여해 전문성을 극대화합니다.</li>
+                                <li><strong>2. 목표 설정 (Goal):</strong> '단일 HTML 파일 생성'처럼 구체적인 목표를 제시하여 결과물의 형식을 명확히 합니다.</li>
+                                <li><strong>3. 맥락 제공 (Context - 3단계 설계):</strong>
+                                    <ul class="list-disc pl-5 mt-2">
+                                        <li><strong>1단계 (교육 철학):</strong> 프로젝트의 핵심 철학, 학습 대상 등 근본적인 '왜'를 정의하여 AI가 일관된 기준을 갖게 합니다.</li>
+                                        <li><strong>2단계 (수업 활동):</strong> 철학을 구체적인 학습 모듈, 피드백 로직 등 '어떻게'로 상세화하여 AI가 실질적인 기능을 구상하게 합니다.</li>
+                                        <li><strong>3. 단계 (설계도 정교화):</strong> 완성된 설계도를 바탕으로 학습 경험, 데이터 관리 등 '무엇을' 더 개선할지 다듬어 완성도를 높입니다.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>4. 제약 조건 명시 (Constraints):</strong> Tailwind CSS 사용 등 기술적 제약 조건을 명시하여 AI가 주어진 환경 내에서 최적의 해결책을 찾도록 합니다.</li>
+                                <li><strong>5. 환경 지정 (Target Environment):</strong> 최종 코드가 사용될 '캔바AI' 같은 특정 환경을 지정하여 플랫폼에 최적화된 결과물을 얻습니다.</li>
                             </ul>
                         </div>
                         <div id="edtech-card" class="dashboard-card">
@@ -317,19 +324,23 @@
         function getSystemPromptForCurrentStage() {
             let stagePrompt = '';
             let responseFormatRule = `**응답 형식:** 반드시 질문('question'), 질문 유형('type': 'choice'), 5개의 선택지 배열('options')을 포함하는 JSON 형식으로만 응답해야 합니다.`;
+            
+            let coreObjective = '';
+            if(conversationHistory.length >= 2) {
+                coreObjective = `**핵심 프로젝트 목표:**\n- 프로젝트 설명: ${conversationHistory[0].answer}\n- 핵심 학습 목표: ${conversationHistory[1].answer}\n\n항상 이 핵심 목표를 중심으로 질문을 생성해주세요.`;
+            }
 
-            // Note: currentStep is 0-indexed. So step 1 is currentStep 0.
-            if (currentStep < 4) { // Steps 1-4
+            if (currentStep < 4) { 
                 stagePrompt = `**1단계: 교육 철학의 뼈대 세우기**\n당신은 교육 컨설턴트입니다. 사용자가 만들려는 교육 프로그램의 핵심 '교육 철학'을 명확히 하도록 도와주세요. 전체 프로젝트의 흔들리지 않는 기준점을 만드는 단계입니다. 프로그램의 근본적인 목표, 핵심 학습 대상, 그리고 주요 교수 전략에 대해 깊이 있는 질문을 해주세요. 아직 구체적인 수업 활동이나 기능 구현에 대한 질문은 피해주세요.`;
-            } else if (currentStep < 8) { // Steps 5-8
+            } else if (currentStep < 8) {
                 stagePrompt = `**2단계: 수업 활동에 살 붙이기 (상세 모듈 설계)**\n이제 철학이라는 뼈대에 구체적인 '수업 활동'이라는 살을 붙일 차례입니다. 사용자가 개발자처럼 구조적으로 생각하도록 유도해주세요. 정보를 어떻게 정리하고 연결할지, 구체적인 학습 모듈을 어떻게 설계할지에 대해 질문해야 합니다. 아래 예시처럼 상세한 답변을 이끌어내는 질문을 해주세요.\n\n# 좋은 질문의 예시:\n- **주제:** 실용적인 영어 시제 학습\n- **상황:** 어제 잃어버린 열쇠를 찾고 있는 친구에게\n- **활동:** 두 가지 문장 카드(A: Did you find your key?, B: Have you found your key?) 중 더 자연스러운 것을 고르게 합니다.\n- **피드백 로직:** B를 고르면 "정답! 지금 열쇠를 찾았는지가 중요하니까요!"라고 피드백. A를 고르면 "과거에 찾았는지보다 '그래서 지금 열쇠가 있는지'가 더 중요하지 않을까요?"라고 힌트를 줍니다.\n- **데이터 구조:** 이 활동을 JSON으로 표현한다면 어떻게 구성할 수 있을까요?`;
-            } else { // Steps 9-10
+            } else {
                 stagePrompt = `**3단계: 완성된 설계도 정교화하기**\n이제 교육 철학과 핵심 수업 활동이 어느정도 정의되었습니다. 마지막으로 전체 설계도를 정교화할 차례입니다. 사용자의 학습 경험을 어떻게 향상시킬 수 있을지, 데이터는 어떻게 관리할 것인지, 또는 학습 효과를 어떻게 측정할 것인지에 대한 마무리 질문을 해주세요.`;
             }
 
             const previousQuestions = conversationHistory.map(turn => `- ${turn.questionObject.question}`).join('\n');
             
-            return `${stagePrompt}\n\n**공통 규칙:**\n1. **중복 금지:** 아래 목록에 있는 질문은 절대로 다시 하지 마세요.\n${previousQuestions}\n2. ${responseFormatRule}`;
+            return `${stagePrompt}\n\n${coreObjective}\n\n**공통 규칙:**\n1. **중복 금지:** 아래 목록에 있는 질문은 절대로 다시 하지 마세요.\n${previousQuestions}\n2. ${responseFormatRule}`;
         }
         
         async function getNextQuestionFromAI() {
@@ -425,7 +436,7 @@
             }
         }
 
-        function submitAnswer(answer) {
+        async function submitAnswer(answer) {
             let userAnswer = answer;
             if (answer === undefined) { 
                  const textInput = document.getElementById('user-text-input');
@@ -441,15 +452,15 @@
             if (currentStep === 1) {
                 askSecondSubjectiveQuestion();
             } else if (currentStep < AI_QUESTION_COUNT) {
-                getNextQuestionFromAI();
+                await getNextQuestionFromAI();
             } else if (currentStep === AI_QUESTION_COUNT) {
                 askFinalSubjectiveQuestion();
             } else {
-                generateFinalPromptAndDashboard();
+                await generateFinalPromptAndDashboard();
             }
         }
         
-        function submitEdit(answer) {
+        async function submitEdit(answer) {
             let newAnswer = answer;
             if (answer === undefined) {
                  const textInput = document.getElementById('user-text-input') || document.getElementById('other-input');
@@ -471,9 +482,8 @@
             const indexToScroll = editingIndex;
             editingIndex = null;
             
-            // Check if final prompt needs to be regenerated
             if (resultSection.classList.contains('hidden') === false) {
-                 generateFinalPromptAndDashboard();
+                 await generateFinalPromptAndDashboard();
             } else {
                  renderInputArea(currentQuestion, '');
             }
@@ -546,10 +556,11 @@
 
         // --- PROMPT & DASHBOARD GENERATION ---
         
-        function generateFinalPromptAndDashboard() {
-            inputArea.innerHTML = `<p class="text-center text-green-400 p-4">프롬프트와 분석 대시보드를 생성 중입니다...</p>`;
+        async function generateFinalPromptAndDashboard() {
+            inputArea.innerHTML = `<p class="text-center text-blue-400 p-4">프롬프트와 분석 대시보드를 생성 중입니다...</p>`;
             generateFinalPrompt();
-            populateDashboard();
+            await populateDashboard();
+            inputArea.innerHTML = `<p class="text-center text-green-400 p-4">모든 과정이 완료되었습니다! 최종 프롬프트와 분석 대시보드를 확인하세요.</p>`;
         }
 
         function generateFinalPrompt() {
@@ -657,7 +668,4 @@
     </script>
 </body>
 </html>
-
-
-
 
